@@ -1,5 +1,7 @@
 
-CFLAGS = -std=c11 -Wall -Werror -O2 -g -D_GNU_SOURCE
+CC=gcc
+#CC=clang
+CFLAGS = -std=c11 -Wall -Werror -O2 -D_GNU_SOURCE
 LDFLAGS = -lX11 -lXext
 PROGNAME = xpulse
 
@@ -11,7 +13,7 @@ all: $(PROGNAME)
 	@ls -li --color=auto $(PROGNAME) 2>/dev/null || true
 
 $(PROGNAME): xpulse.c
-	gcc $(CFLAGS) $(LDFLAGS) xpulse.c -o $(PROGNAME)
+	$(CC) $(CFLAGS) $(LDFLAGS) xpulse.c -o $(PROGNAME)
 
 clean:
 	@rm -v $(PROGNAME) 2>/dev/null || true

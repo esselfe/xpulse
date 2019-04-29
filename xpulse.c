@@ -4,31 +4,38 @@
 #include <string.h>
 #include <time.h>
 #include <signal.h>
+#include <getopt.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
-const char *xwin_version_string = "0.3";
+const char *xpulse_version_string = "0.4";
 #define OPTION_NONE       0
 #define OPTION_VERBOSE    1
 #define _NET_WM_STATE_REMOVE        0    // remove/unset property
 #define _NET_WM_STATE_ADD           1    // add/set property
 #define _NET_WM_STATE_TOGGLE        2    // toggle property
-//unsigned int options = OPTION_VERBOSE;
-unsigned int options = OPTION_NONE;
+static const struct option long_options[] = {
+	{"help", no_argument, NULL, 'h'},
+	{"version", no_argument, NULL, 'V'},
+	{"position-x", required_argument, NULL, 'x'},
+	{"position-y", required_argument, NULL, 'y'},
+	{NULL, 0, NULL, 0}
+};
+static const char *short_options = "hVx:y:";
+unsigned int sleep_time = 10000; // 1000000 == 1sec
 Display *display;
 Screen *screen;
 int screen_num;
 int depth;
 XSetWindowAttributes wattr;
+const unsigned int winW = 1280, winH = 800;
+unsigned int winX, winY;
 Window window, root_window;
 XEvent ev;
 XSizeHints wmsize;
 XWMHints wmhint;
-XTextProperty wname, iname;
-char *window_name = "xpulse 0.2", *icon_name = "xpulse";
 unsigned int loopend = 0;
-unsigned int sleep_time = 10000; // 1000000 == 1sec
 
 int ErrorFunc(Display *display, XErrorEvent *error) {
 	printf("Error code %d: ", error->error_code);
@@ -75,11 +82,41 @@ void SignalUSR1(int signum) {
 
 }
 
+void ShowHelp(void) {
+	printf("Usage: xpulse { --position-x/-x NUMBER | --position-y/-y NUMBER | --help/-h | --version/-V }\n");
+}
+
+void ShowVersion(void) {
+	printf("xpulse %s\n", xpulse_version_string);
+}
+
 int main(int argc, char **argv) {
 	nice(10);
 	XSetErrorHandler(ErrorFunc);
 
 	signal(SIGUSR1, SignalUSR1);
+
+	winX = winW-(1000000/sleep_time+16);
+	int c = 0;
+	while (c != -1) {
+		c = getopt_long(argc, argv, short_options, long_options, NULL);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'h':
+			ShowHelp();
+			exit(0);
+		case 'V':
+			ShowVersion();
+			exit(0);
+		case 'x':
+			winX = atoi(optarg);
+			break;
+		case 'y':
+			winY = atoi(optarg);
+			break;
+		}
+	}
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL) {
@@ -90,10 +127,6 @@ int main(int argc, char **argv) {
 	screen = XDefaultScreenOfDisplay(display);
 	screen_num = XScreenNumberOfScreen(screen);
 	depth = XDefaultDepthOfScreen(screen);
-	if (options & OPTION_VERBOSE) {
-		printf("screen number: %d\n", screen_num);
-		printf("screen depth: %d\n", depth);
-	}
 	root_window = XDefaultRootWindow(display);
 
 	//wattr.background_pixel = BlackPixel(display, screen_num);
@@ -101,7 +134,7 @@ int main(int argc, char **argv) {
 	wattr.event_mask = KeyPressMask | ButtonPressMask;
 	wattr.cursor = None;
 	window = XCreateWindow(display, root_window,
-		1280-(1000000/sleep_time+16), 0, 1000000/sleep_time+16, 20, 1, depth, InputOutput, DefaultVisual(display, screen_num),
+		winX, winY, 1000000/sleep_time+16, 20, 1, depth, InputOutput, DefaultVisual(display, screen_num),
 		CWBackPixel | CWCursor | CWEventMask, &wattr);
 	
 	wmsize.flags = USPosition | USSize;
@@ -111,11 +144,6 @@ int main(int argc, char **argv) {
 	wmhint.flags = StateHint;
 	XSetWMHints(display, window, &wmhint);
 	
-	XStringListToTextProperty(&window_name, 1, &wname);
-	XSetWMName(display, window, &wname);
-	XStringListToTextProperty(&icon_name, 1, &iname);
-	XSetWMIconName(display, window, &iname);
-
 	Atom window_type = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
 	long value = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DOCK", False);
 	XChangeProperty(display, window, window_type,

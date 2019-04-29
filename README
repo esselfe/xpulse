@@ -1,7 +1,8 @@
-Date: 181123
+Date: 190429
 xpulse is a rectangular visual cue of system-lag/freeze response,
-located at the top-right corner of the screen. The source code
-uses the X11 libraries to draw a borderless window on the desktop.
+located at the top-right corner of the screen by default or where
+specified via the command options. The source code uses the X11
+libraries to draw a borderless window on the desktop.
 
 Just type 'make' in the source directory and copy the executable
 where appropriate/preffered.
