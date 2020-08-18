@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <time.h>
 #include <signal.h>
 #include <getopt.h>
+#include <sys/mman.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
-const char *xpulse_version_string = "0.4";
+const char *xpulse_version_string = "0.4.1";
 #define OPTION_NONE       0
 #define OPTION_VERBOSE    1
 #define _NET_WM_STATE_REMOVE        0    // remove/unset property
@@ -91,6 +93,8 @@ void ShowVersion(void) {
 }
 
 int main(int argc, char **argv) {
+	if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1)
+		fprintf(stderr, "xpulse error: Cannot mlockall(): %s\n", strerror(errno));
 	nice(10);
 	XSetErrorHandler(ErrorFunc);
 
@@ -134,7 +138,7 @@ int main(int argc, char **argv) {
 	wattr.event_mask = KeyPressMask | ButtonPressMask;
 	wattr.cursor = None;
 	window = XCreateWindow(display, root_window,
-		winX, winY, 1000000/sleep_time+16, 20, 1, depth, InputOutput, DefaultVisual(display, screen_num),
+		winX, winY, 1000000/sleep_time+16, 4, 1, depth, InputOutput, DefaultVisual(display, screen_num),
 		CWBackPixel | CWCursor | CWEventMask, &wattr);
 	
 	wmsize.flags = USPosition | USSize;
@@ -198,7 +202,7 @@ int main(int argc, char **argv) {
 			switch (ev.type) {
 			case ButtonPress:
 				XBell(display, 80);
-				XClearArea(display, window, 0, 3, 800, 12, True);
+				XClearArea(display, window, 0, 3, 800, 7, True);
 				break;
 			case KeyPress:
 				if (ev.xkey.keycode == 9)
@@ -210,9 +214,9 @@ int main(int argc, char **argv) {
 		if (tc > tp) {
 			tp = tc;
 			cnt = 0;
-			XClearArea(display, window, 8, 5, 400, 9, True);
+			XClearArea(display, window, 0, 0, 400, 4, True);
 		}
-		XDrawLine(display, window, gc, 8, 8, 8+(cnt++), 8);
+		XDrawLine(display, window, gc, 0, 0, cnt++, 4);
 		usleep(sleep_time);
 	}
 
