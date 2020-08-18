@@ -11,7 +11,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
-const char *xpulse_version_string = "0.4.1";
+const char *xpulse_version_string = "0.4.2";
 #define OPTION_NONE       0
 #define OPTION_VERBOSE    1
 #define _NET_WM_STATE_REMOVE        0    // remove/unset property
