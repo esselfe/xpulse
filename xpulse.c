@@ -155,6 +155,11 @@ int main(int argc, char **argv) {
 
 	XMapWindow(display, window);
 
+	XWindowChanges ch;
+	ch.x = winX;
+	ch.y = winY;
+	XConfigureWindow(display, window, CWX | CWY, &ch);
+
 	Atom wmStateAbove = XInternAtom(display, "_NET_WM_STATE_ABOVE", 1);
 	Atom wmStateSticky = XInternAtom(display, "_NET_WM_STATE_STICKY", 1);
 	Atom wmNetWmState = XInternAtom(display, "_NET_WM_STATE", 1);
