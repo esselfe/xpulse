@@ -20,18 +20,20 @@ const char *xpulse_version_string = "0.4.3";
 static const struct option long_options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
-	{"position-x", required_argument, NULL, 'x'},
-	{"position-y", required_argument, NULL, 'y'},
+	{"height", required_argument, NULL, 'H'},
+	{"width", required_argument, NULL, 'W'},
+	{"position-x", required_argument, NULL, 'X'},
+	{"position-y", required_argument, NULL, 'Y'},
 	{NULL, 0, NULL, 0}
 };
-static const char *short_options = "hVx:y:";
-unsigned int sleep_time = 10000; // 1000000 == 1sec
+static const char *short_options = "hVH:W:X:Y:";
+unsigned int sleep_time = 10000; // 1000000 == 1sec, 1000 == 1ms
 Display *display;
 Screen *screen;
 int screen_num;
 int depth;
 XSetWindowAttributes wattr;
-const unsigned int winW = 1280, winH = 800;
+unsigned int winW = 116, winH = 4;
 unsigned int winX, winY;
 Window window, root_window;
 XEvent ev;
@@ -113,11 +115,21 @@ int main(int argc, char **argv) {
 		case 'V':
 			ShowVersion();
 			exit(0);
-		case 'x':
-			winX = atoi(optarg);
+		case 'H':
+			if (optarg != NULL)
+				winH = atoi(optarg);
 			break;
-		case 'y':
-			winY = atoi(optarg);
+		case 'W':
+			if (optarg != NULL)
+				winW = atoi(optarg);
+			break;
+		case 'X':
+			if (optarg != NULL)
+				winX = atoi(optarg);
+			break;
+		case 'Y':
+			if (optarg != NULL)
+				winY = atoi(optarg);
 			break;
 		}
 	}
@@ -138,7 +150,8 @@ int main(int argc, char **argv) {
 	wattr.event_mask = KeyPressMask | ButtonPressMask;
 	wattr.cursor = None;
 	window = XCreateWindow(display, root_window,
-		winX, winY, 1000000/sleep_time+16, 4, 1, depth, InputOutput, DefaultVisual(display, screen_num),
+		//winX, winY, 1000000/sleep_time+16, 4, 1, depth, InputOutput, DefaultVisual(display, screen_num),
+		winX, winY, winW, winH, 1, depth, InputOutput, DefaultVisual(display, screen_num),
 		CWBackPixel | CWCursor | CWEventMask, &wattr);
 	
 	wmsize.flags = USPosition | USSize;
@@ -196,7 +209,7 @@ int main(int argc, char **argv) {
 	XGCValues gcv;
 	gcv.foreground = 0x304050;
 	gcv.background = 0x0408c0;
-	gcv.line_width = 10;
+	gcv.line_width = winH;
 	GC gc = XCreateGC(display, window, GCForeground|GCBackground|GCLineWidth, &gcv);
 
 	time_t tc, tp = time(NULL);
@@ -207,7 +220,7 @@ int main(int argc, char **argv) {
 			switch (ev.type) {
 			case ButtonPress:
 				XBell(display, 80);
-				XClearArea(display, window, 0, 3, 800, 7, True);
+				XClearArea(display, window, 0, 0, winW, winH, True);
 				break;
 			case KeyPress:
 				if (ev.xkey.keycode == 9)
@@ -219,9 +232,9 @@ int main(int argc, char **argv) {
 		if (tc > tp) {
 			tp = tc;
 			cnt = 0;
-			XClearArea(display, window, 0, 0, 400, 4, True);
+			XClearArea(display, window, 0, 0, winW, winH, True);
 		}
-		XDrawLine(display, window, gc, 0, 0, cnt++, 4);
+		XDrawLine(display, window, gc, 0, winH/2, cnt++, winH/2);
 		usleep(sleep_time);
 	}
 
