@@ -20,13 +20,15 @@ const char *xpulse_version_string = "0.4.3";
 static const struct option long_options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
+	{"background", required_argument, NULL, 'b'},
+	{"color", required_argument, NULL, 'c'},
 	{"height", required_argument, NULL, 'H'},
 	{"width", required_argument, NULL, 'W'},
 	{"position-x", required_argument, NULL, 'X'},
 	{"position-y", required_argument, NULL, 'Y'},
 	{NULL, 0, NULL, 0}
 };
-static const char *short_options = "hVH:W:X:Y:";
+static const char *short_options = "hVb:c:H:W:X:Y:";
 unsigned int sleep_time = 10000; // 1000000 == 1sec, 1000 == 1ms
 Display *display;
 Screen *screen;
@@ -36,6 +38,7 @@ XSetWindowAttributes wattr;
 unsigned int winW = 116, winH = 4;
 unsigned int winX, winY;
 Window window, root_window;
+unsigned long background_color = 0x0408c0, foreground_color = 0x304050;
 XEvent ev;
 XSizeHints wmsize;
 XWMHints wmhint;
@@ -94,15 +97,79 @@ void ShowVersion(void) {
 	printf("xpulse %s\n", xpulse_version_string);
 }
 
+int hex2int(char hex) {
+    switch (hex) {
+    case '0':
+        return 0;
+    case '1':
+        return 1;
+    case '2':
+        return 2;
+    case '3':
+        return 3;
+    case '4':
+        return 4;
+    case '5':
+        return 5;
+    case '6':
+        return 6;
+    case '7':
+        return 7;
+    case '8':
+        return 8;
+    case '9':
+        return 9;
+    case 'A':
+    case 'a':
+        return 10;
+    case 'B':
+    case 'b':
+        return 11;
+    case 'C':
+    case 'c':
+        return 12;
+    case 'D':
+    case 'd':
+		return 13;
+    case 'E':
+    case 'e':
+        return 14;
+    case 'F':
+    case 'f':
+        return 15;
+    default:
+        return 0;
+    }
+    return 0;
+}
+
+unsigned long hex2ulong(char *hexstr) {
+	int cnt;
+    unsigned long val = 0;
+    for (cnt = 5; cnt >= 0; cnt--) {
+        if (cnt == 5)
+            val += hex2int(hexstr[cnt]);
+        else if (cnt == 4)
+            val += hex2int(hexstr[cnt])*16;
+        else if (cnt == 3)
+            val += hex2int(hexstr[cnt])*16*16;
+        else if (cnt == 2)
+            val += hex2int(hexstr[cnt])*16*16*16;
+        else if (cnt == 1)
+            val += hex2int(hexstr[cnt])*16*16*16*16;
+        else if (cnt == 0)
+            val += hex2int(hexstr[cnt])*16*16*16*16*16;
+    }
+
+    return val;
+}
+
 int main(int argc, char **argv) {
-	if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1)
-		fprintf(stderr, "xpulse error: Cannot mlockall(): %s\n", strerror(errno));
 	nice(10);
 	XSetErrorHandler(ErrorFunc);
 
 	signal(SIGUSR1, SignalUSR1);
 
-	winX = winW-(1000000/sleep_time+16);
 	int c = 0;
 	while (c != -1) {
 		c = getopt_long(argc, argv, short_options, long_options, NULL);
@@ -115,6 +182,16 @@ int main(int argc, char **argv) {
 		case 'V':
 			ShowVersion();
 			exit(0);
+		case 'b':
+			if (optarg != NULL)
+				background_color = hex2ulong(optarg);
+			printf("background: %lu\n", background_color);
+			break;
+		case 'c':
+			if (optarg != NULL)
+				foreground_color = hex2ulong(optarg);
+			printf("foreground: %lu\n", foreground_color);
+			break;
 		case 'H':
 			if (optarg != NULL)
 				winH = atoi(optarg);
@@ -207,8 +284,8 @@ int main(int argc, char **argv) {
 	}
 
 	XGCValues gcv;
-	gcv.foreground = 0x304050;
-	gcv.background = 0x0408c0;
+	gcv.foreground = foreground_color;
+	gcv.background = background_color;
 	gcv.line_width = winH;
 	GC gc = XCreateGC(display, window, GCForeground|GCBackground|GCLineWidth, &gcv);
 
