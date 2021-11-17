@@ -90,7 +90,9 @@ void SignalUSR1(int signum) {
 }
 
 void ShowHelp(void) {
-	printf("Usage: xpulse { --position-x/-x NUMBER | --position-y/-y NUMBER | --help/-h | --version/-V }\n");
+	printf("Usage: xpulse { --position-x/-X NUMBER | --position-y/-Y NUMBER }\n");
+	printf("              { --width NUMBER | --height NUMBER }\n");
+	printf("              { --help/-h | --version/-V }\n");
 }
 
 void ShowVersion(void) {
