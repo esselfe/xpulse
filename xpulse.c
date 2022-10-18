@@ -11,7 +11,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
-const char *xpulse_version_string = "0.4.4";
+const char *xpulse_version_string = "0.4.5";
 #define OPTION_NONE       0
 #define OPTION_VERBOSE    1
 #define _NET_WM_STATE_REMOVE        0    // remove/unset property
@@ -22,13 +22,14 @@ static const struct option long_options[] = {
 	{"version", no_argument, NULL, 'V'},
 	{"background", required_argument, NULL, 'b'},
 	{"color", required_argument, NULL, 'c'},
+	{"nice", required_argument, NULL, 'n'},
 	{"height", required_argument, NULL, 'H'},
 	{"width", required_argument, NULL, 'W'},
 	{"position-x", required_argument, NULL, 'X'},
 	{"position-y", required_argument, NULL, 'Y'},
 	{NULL, 0, NULL, 0}
 };
-static const char *short_options = "hVb:c:H:W:X:Y:";
+static const char *short_options = "hVb:c:n:H:W:X:Y:";
 unsigned int sleep_time = 10000; // 1000000 == 1sec, 1000 == 1ms
 Display *display;
 Screen *screen;
@@ -39,6 +40,7 @@ unsigned int winW = 116, winH = 4;
 unsigned int winX, winY;
 Window window, root_window;
 unsigned long background_color = 0x0408c0, foreground_color = 0x304050;
+int nice_level = 10;
 XEvent ev;
 XSizeHints wmsize;
 XWMHints wmhint;
@@ -90,9 +92,11 @@ void SignalUSR1(int signum) {
 }
 
 void ShowHelp(void) {
-	printf("Usage: xpulse { --position-x/-X NUMBER | --position-y/-Y NUMBER }\n");
-	printf("              { --width NUMBER | --height NUMBER }\n");
-	printf("              { --help/-h | --version/-V }\n");
+	printf("Usage: xpulse { --position-x/-X NUMBER | --position-y/-Y NUMBER (in pixels) }\n");
+	printf("    { --width NUMBER | --height NUMBER (in pixels) }\n");
+	printf("    { --nice/-n NUMBER (process priority from 0-19, -20-19 if priviledged) }\n");
+	printf("    { --background RRGGBB | --color RRGGBB (hex red-green-blue) }\n");
+	printf("    { --help/-h | --version/-V }\n");
 }
 
 void ShowVersion(void) {
@@ -167,7 +171,6 @@ unsigned long hex2ulong(char *hexstr) {
 }
 
 int main(int argc, char **argv) {
-	nice(10);
 	XSetErrorHandler(ErrorFunc);
 
 	signal(SIGUSR1, SignalUSR1);
@@ -194,6 +197,10 @@ int main(int argc, char **argv) {
 				foreground_color = hex2ulong(optarg);
 			printf("foreground: %lu\n", foreground_color);
 			break;
+		case 'n':
+			if (strlen(optarg))
+				nice_level = atoi(optarg);
+			break;
 		case 'H':
 			if (optarg != NULL)
 				winH = atoi(optarg);
@@ -212,6 +219,9 @@ int main(int argc, char **argv) {
 			break;
 		}
 	}
+
+	// Set process priority now
+	nice(nice_level);
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL) {
@@ -258,21 +268,11 @@ int main(int argc, char **argv) {
 	if( wmStateAbove != None ) {
 		XClientMessageEvent xclient;
 		memset( &xclient, 0, sizeof (xclient) );
-    //
-    //window  = the respective client window
-    //message_type = _NET_WM_STATE
-    //format = 32
-    //data.l[0] = the action, as listed below
-    //data.l[1] = first property to alter
-    //data.l[2] = second property to alter
-    //data.l[3] = source indication (0-unk,1-normal app,2-pager)
-    //other data.l[] elements = 0
-    //
 		xclient.type = ClientMessage;
 		xclient.window = window;
 		xclient.message_type = wmNetWmState;
 		xclient.format = 32;
-		xclient.data.l[0] = _NET_WM_STATE_ADD; // add ? _NET_WM_STATE_ADD : _NET_WM_STATE_REMOVE;
+		xclient.data.l[0] = _NET_WM_STATE_ADD;
 		xclient.data.l[1] = wmStateAbove;
 		xclient.data.l[2] = wmStateSticky;
 		xclient.data.l[3] = 0;
@@ -285,6 +285,7 @@ int main(int argc, char **argv) {
 			(XEvent *)&xclient );
 	}
 
+	// Create X graphical context
 	XGCValues gcv;
 	gcv.foreground = foreground_color;
 	gcv.background = background_color;
@@ -313,8 +314,9 @@ int main(int argc, char **argv) {
 			cnt = 0;
 			XClearArea(display, window, 0, 0, winW, winH, True);
 		}
-		XDrawLine(display, window, gc, 0, winH/2, cnt++, winH/2);
+		XDrawLine(display, window, gc, cnt-1, winH/2, cnt, winH/2);
 		usleep(sleep_time);
+		++cnt;
 	}
 
 	XUnmapWindow(display, window);
