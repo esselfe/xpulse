@@ -1,7 +1,7 @@
 
 CC=gcc
 #CC=clang
-CFLAGS = -std=c11 -Wall -Werror -O2 -D_GNU_SOURCE
+CFLAGS = -std=c11 -Wall -O2 -D_GNU_SOURCE
 LDFLAGS = -lX11 -lXext
 PROGNAME = xpulse
 
